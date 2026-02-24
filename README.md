@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Veti-Social-Gen (獸醫社群行銷小編)
 
-## Getting Started
+這是一個專為獸醫師設計的社群文案產生器。
+系統整合了「本地向量知識庫 (Local RAG)」，可以讓您上傳厚重的獸醫教科書或論文至**您自己電腦的本地資料庫**中永久保存。當您輸入疾病名稱時，AI 會自動從您的本地資料庫精準檢索最相關的段落，並轉化為 Facebook、Instagram、Threads、或影音腳本。
 
-First, run the development server:
+## 系統特色
+- 💰 **極低 API 成本**：透過本地資料庫 (ChromaDB) 進行語意搜索，不再需要把幾千頁的教科書反覆傳給 AI。
+- 🔒 **100% 隱私安全**：所有教科書、醫院內部機密營運文件完全保留在您的電腦硬碟中，只有最終擷取出來的幾句話會發送給 AI 潤飾。
+- 🎯 **客製化產生**：自由勾選需要的平台，AI 不會浪費時間產生用不到的文章。
 
+---
+
+## 🛠️ 環境建置與啟動教學 (必讀)
+
+要讓這套系統完美運作，您需要在電腦上同時啟動兩個服務：
+1. **本地向量資料庫 (ChromaDB)**：負責記憶您的教科書。
+2. **網頁伺服器 (Next.js)**：提供操作介面。
+
+### 第一步：啟動本地 ChromaDB 資料庫
+我們使用最受歡迎的輕量級開源資料庫 ChromaDB。由於我們需要它作為一個常駐的後台服務，您可以在您的 Mac 上透過 `Docker` 或 `Python` 啟動它 (擇一即可)。
+
+**選項 A：使用 Docker 啟動 (最推薦，環境最乾淨)**
+打開終端機 (Terminal) 輸入以下指令：
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker run -p 8000:8000 chromadb/chroma
+```
+*(如果這台電腦還沒有安裝 Docker，請前往 [Docker 官網](https://www.docker.com/products/docker-desktop/) 下載安裝 Docker Desktop for Mac)*
+
+**選項 B：使用 Python 啟動**
+打開終端機 (Terminal) 輸入以下指令：
+```bash
+pip install chromadb
+chroma run --path ./chroma_data
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+啟動成功後，您的電腦上就有一個專屬的私有 AI 記憶庫在 `http://localhost:8000` 默默運作了！
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 第二步：啟動網頁伺服器
+打開第二個終端機視窗，進入此專案資料夾，啟動前端網頁目錄：
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+接著打開瀏覽器，輸入 `http://localhost:3000` 即可看到操作介面。
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📖 如何使用本地資料庫 (RAG) 操作指南
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **進入系統**：確定 ChromaDB 跟網頁都在運作後，進入 `http://localhost:3000`。
+2. **第一階段 - 把書存進大腦 (Ingest)**：
+   * 在左側控制面板，找到**「上傳教科書至本地資料庫」**的按鈕。
+   * 將您的獸醫內科、外科教科書 (PDF) 丟進去並按下上傳。
+   * 系統會在背景把這本書切成成千上萬的小塊，並存進剛才跑在您電腦裡的 ChromaDB（這個過程完全免費且自動）。一旦上傳完成，這本書就會**永久印在系統的腦海裡**，下次不需要再上傳了！
+3. **第二階段 - 提取與產生 (Generate)**：
+   * 在「目標疾病」中輸入：*(例如)* `貓齒吸收 (FORL)`。
+   * 在「推廣服務」中輸入：*(例如)* `全口數位牙科X光與洗牙`。
+   * 貼上您的 Google Gemini API Key，勾選您要發佈的社群平台，按下「一鍵生成」。
+   * **魔法發生**：系統會在 1 秒內去翻閱您的本地資料庫，精準抓出「貓齒吸收」在那本幾千頁教科書中的那 3 段重點，然後只用這 3 段極短的文字請 AI 寫成行銷文案。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+🎉 從此之後，您的 API Token 消耗將會逼近於 0，且醫院助理隨時都可以上來點擊產出極具醫學深度的專業衛教文稿！
