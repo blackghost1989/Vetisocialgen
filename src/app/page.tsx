@@ -161,19 +161,14 @@ export default function Dashboard() {
         setImageLoading(true);
         const newImages: Record<string, string[]> = {};
 
-        // Helper: extract image prompts from generated content
+        // Helper: extract image prompts from generated content (generic)
         const extractImagePrompts = (text: string): string[] => {
           const prompts: string[] = [];
-
-          // 1) Try to grab 🎨 blocks: everything from 🎨 until the next section marker
           const artBlocks = text.match(/🎨[^]*?(?=\n(?:📝|💡|🏷️|🎬|🎙️|【[^🎨]|#{1,3}\s)|$)/g);
-
-          // 2) Try to grab titles: 大標題、標題文字、【首圖大字】 patterns
           const titleMatches = text.match(/(?:大標題|標題文字|【首圖大字】)[：:\s]*(.+)/g);
 
           if (artBlocks && artBlocks.length > 0) {
             for (const block of artBlocks) {
-              // Find any nearby title to enrich the prompt
               let combinedPrompt = block.trim();
               if (titleMatches && titleMatches.length > 0) {
                 combinedPrompt += `\n標題：${titleMatches[0].replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim()}`;
@@ -181,13 +176,57 @@ export default function Dashboard() {
               prompts.push(combinedPrompt);
             }
           } else if (titleMatches && titleMatches.length > 0) {
-            // No 🎨 blocks but have titles — build a prompt from titles
             for (const t of titleMatches) {
               const titleText = t.replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim();
               prompts.push(`專業獸醫衛教插圖，主題：${titleText}。風格：現代、溫馨、專業，柔和色調，適合社群媒體。`);
             }
           }
+          return prompts;
+        };
 
+        // IG-specific: parse each carousel page and build prompt with text overlay instructions
+        const extractIgCarouselPrompts = (text: string): string[] => {
+          const prompts: string[] = [];
+
+          // Split by page markers: 【第N頁】, 第N頁, Page N, --- separators, or numbered headers
+          const pages = text.split(/(?=【第\d+頁】|(?:^|\n)第\d+頁|(?:^|\n)Page\s*\d+|(?:^|\n)#{1,3}\s*第?\d+|(?:^|\n)---)/);
+
+          for (const page of pages) {
+            if (!page.trim()) continue;
+
+            // Extract 🎨 visual design block
+            const artMatch = page.match(/🎨[^]*?(?=\n(?:大標題|標題|內文|📝|💡|🏷️)|$)/);
+            // Extract title (大標題, 標題, 【首圖大字】)
+            const titleMatch = page.match(/(?:大標題|標題文字?|【首圖大字】)[：:\s]*(.+)/);
+            // Extract body text (內文)
+            const bodyMatch = page.match(/(?:內文)[：:\s]*([^]*?)(?=\n(?:🎨|大標題|標題|【|#{1,3}\s|---)|$)/);
+
+            if (artMatch || titleMatch) {
+              const visualDesc = artMatch ? artMatch[0].trim() : "";
+              const title = titleMatch ? titleMatch[1].trim() : "";
+              const body = bodyMatch ? bodyMatch[1].trim().replace(/\n+/g, " ") : "";
+
+              let prompt = "";
+              if (visualDesc) {
+                prompt += visualDesc + "\n";
+              }
+              prompt += "圖片文字疊加規則：\n";
+              if (title) {
+                prompt += `- 圖片上方置中顯示大標題文字：「${title}」，使用粗體大字\n`;
+              }
+              if (body) {
+                prompt += `- 圖片下方顯示內文：「${body}」，使用較小字體\n`;
+              }
+              if (!visualDesc && !title && !body) continue;
+              prompt += "風格：現代、溫馨、專業的獸醫衛教插圖，適合 Instagram 輪播，正方形構圖。";
+              prompts.push(prompt.trim());
+            }
+          }
+
+          // If page splitting didn't work, fall back to generic extraction
+          if (prompts.length === 0) {
+            return extractImagePrompts(text);
+          }
           return prompts;
         };
 
@@ -200,7 +239,8 @@ export default function Dashboard() {
 
         for (const p of selectedPlatforms) {
           const content = typeof data[p] === "string" ? data[p] : flattenContent(data[p]);
-          let imagePrompts = extractImagePrompts(content);
+          // Use IG-specific carousel parser for Instagram, generic for others
+          let imagePrompts = p === "ig" ? extractIgCarouselPrompts(content) : extractImagePrompts(content);
 
           // Fallback: if extraction completely failed, use disease + platform as prompt
           if (imagePrompts.length === 0) {
