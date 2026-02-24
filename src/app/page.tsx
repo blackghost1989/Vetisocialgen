@@ -156,35 +156,80 @@ export default function Dashboard() {
 
       setResult(data);
 
-      // Auto image generation
+      // Auto image generation — extract 🎨 visual design + title from generated content
       if (autoImage) {
         setImageLoading(true);
         const newImages: Record<string, string[]> = {};
+
+        // Helper: extract image prompts from generated content
+        const extractImagePrompts = (text: string): string[] => {
+          const prompts: string[] = [];
+
+          // 1) Try to grab 🎨 blocks: everything from 🎨 until the next section marker
+          const artBlocks = text.match(/🎨[^]*?(?=\n(?:📝|💡|🏷️|🎬|🎙️|【[^🎨]|#{1,3}\s)|$)/g);
+
+          // 2) Try to grab titles: 大標題、標題文字、【首圖大字】 patterns
+          const titleMatches = text.match(/(?:大標題|標題文字|【首圖大字】)[：:\s]*(.+)/g);
+
+          if (artBlocks && artBlocks.length > 0) {
+            for (const block of artBlocks.slice(0, 3)) {
+              // Find any nearby title to enrich the prompt
+              let combinedPrompt = block.trim();
+              if (titleMatches && titleMatches.length > 0) {
+                combinedPrompt += `\n標題：${titleMatches[0].replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim()}`;
+              }
+              prompts.push(combinedPrompt);
+            }
+          } else if (titleMatches && titleMatches.length > 0) {
+            // No 🎨 blocks but have titles — build a prompt from titles
+            for (const t of titleMatches.slice(0, 3)) {
+              const titleText = t.replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim();
+              prompts.push(`專業獸醫衛教插圖，主題：${titleText}。風格：現代、溫馨、專業，柔和色調，適合社群媒體。`);
+            }
+          }
+
+          return prompts;
+        };
+
+        const platformLabels: Record<string, string> = {
+          fb: "Facebook 貼文主圖",
+          ig: "Instagram 輪播圖",
+          threads: "Threads 貼文配圖",
+          video: "影片縮圖",
+        };
+
         for (const p of selectedPlatforms) {
           const content = typeof data[p] === "string" ? data[p] : flattenContent(data[p]);
-          // Extract all 🎨 visual design descriptions
-          const designMatches = content.match(/🎨[^\n]*(?:\n(?!【|#|\d+\.|---)[^\n]*)*/g);
-          if (designMatches && designMatches.length > 0) {
-            const imgs: string[] = [];
-            // Generate up to 3 images per platform to save API costs
-            const prompts = designMatches.slice(0, 3);
-            for (const designPrompt of prompts) {
-              try {
-                const imgRes = await fetch("/api/image", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ apiKey, prompt: designPrompt, platform: p }),
-                });
-                const imgData = await imgRes.json();
-                if (imgData.success && imgData.image) {
-                  imgs.push(imgData.image);
-                }
-              } catch (err) {
-                console.warn(`Image gen failed for ${p}:`, err);
-              }
-            }
-            if (imgs.length > 0) newImages[p] = imgs;
+          let imagePrompts = extractImagePrompts(content);
+
+          // Fallback: if extraction completely failed, use disease + platform as prompt
+          if (imagePrompts.length === 0) {
+            const label = platformLabels[p] || "社群貼文配圖";
+            imagePrompts = [`專業獸醫衛教插圖，主題：${disease}。用途：${label}。風格：現代、溫馨、專業的醫療插畫風格，柔和色調，適合社群媒體，不含任何文字。`];
+            console.log(`[Image] No 🎨/title found for ${p}, using fallback prompt`);
+          } else {
+            console.log(`[Image] Extracted ${imagePrompts.length} prompt(s) for ${p}`);
           }
+
+          const imgs: string[] = [];
+          for (const imagePrompt of imagePrompts) {
+            try {
+              const imgRes = await fetch("/api/image", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ apiKey, prompt: imagePrompt, platform: p }),
+              });
+              const imgData = await imgRes.json();
+              if (imgData.success && imgData.image) {
+                imgs.push(imgData.image);
+              } else {
+                console.warn(`Image gen returned no image for ${p}:`, imgData.error);
+              }
+            } catch (err) {
+              console.warn(`Image gen failed for ${p}:`, err);
+            }
+          }
+          if (imgs.length > 0) newImages[p] = imgs;
         }
         setImages(newImages);
         setImageLoading(false);
