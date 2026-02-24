@@ -18,8 +18,7 @@ import {
   RefreshCw,
   GraduationCap,
   Sparkles,
-  ImageIcon,
-  Download,
+
 } from "lucide-react";
 
 type Platform = "fb" | "ig" | "threads" | "video";
@@ -37,9 +36,7 @@ export default function Dashboard() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(["fb", "ig", "threads", "video"]);
   const [generatedPlatforms, setGeneratedPlatforms] = useState<Platform[]>([]);
   const [style, setStyle] = useState<"professional" | "social">("social");
-  const [autoImage, setAutoImage] = useState(false);
-  const [images, setImages] = useState<Record<string, string[]>>({});
-  const [imageLoading, setImageLoading] = useState(false);
+
 
   const [isDbMode, setIsDbMode] = useState(false);
   const [dbStatus, setDbStatus] = useState({ loading: false, message: "", success: false });
@@ -155,125 +152,6 @@ export default function Dashboard() {
       }
 
       setResult(data);
-
-      // Auto image generation — extract 🎨 visual design + title from generated content
-      if (autoImage) {
-        setImageLoading(true);
-        const newImages: Record<string, string[]> = {};
-
-        // Helper: extract image prompts from generated content (generic)
-        const extractImagePrompts = (text: string): string[] => {
-          const prompts: string[] = [];
-          const artBlocks = text.match(/🎨[^]*?(?=\n(?:📝|💡|🏷️|🎬|🎙️|【[^🎨]|#{1,3}\s)|$)/g);
-          const titleMatches = text.match(/(?:大標題|標題文字|【首圖大字】)[：:\s]*(.+)/g);
-
-          if (artBlocks && artBlocks.length > 0) {
-            for (const block of artBlocks) {
-              let combinedPrompt = block.trim();
-              if (titleMatches && titleMatches.length > 0) {
-                combinedPrompt += `\n標題：${titleMatches[0].replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim()}`;
-              }
-              prompts.push(combinedPrompt);
-            }
-          } else if (titleMatches && titleMatches.length > 0) {
-            for (const t of titleMatches) {
-              const titleText = t.replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim();
-              prompts.push(`專業獸醫衛教插圖，主題：${titleText}。風格：現代、溫馨、專業，柔和色調，適合社群媒體。`);
-            }
-          }
-          return prompts;
-        };
-
-        // IG-specific: parse each carousel page and build prompt with text overlay instructions
-        const extractIgCarouselPrompts = (text: string): string[] => {
-          const prompts: string[] = [];
-
-          // Split by page markers: 【第N頁】, 第N頁, Page N, --- separators, or numbered headers
-          const pages = text.split(/(?=【第\d+頁】|(?:^|\n)第\d+頁|(?:^|\n)Page\s*\d+|(?:^|\n)#{1,3}\s*第?\d+|(?:^|\n)---)/);
-
-          for (const page of pages) {
-            if (!page.trim()) continue;
-
-            // Extract 🎨 visual design block
-            const artMatch = page.match(/🎨[^]*?(?=\n(?:大標題|標題|內文|📝|💡|🏷️)|$)/);
-            // Extract title (大標題, 標題, 【首圖大字】)
-            const titleMatch = page.match(/(?:大標題|標題文字?|【首圖大字】)[：:\s]*(.+)/);
-            // Extract body text (內文)
-            const bodyMatch = page.match(/(?:內文)[：:\s]*([^]*?)(?=\n(?:🎨|大標題|標題|【|#{1,3}\s|---)|$)/);
-
-            if (artMatch || titleMatch) {
-              const visualDesc = artMatch ? artMatch[0].trim() : "";
-              const title = titleMatch ? titleMatch[1].trim() : "";
-              const body = bodyMatch ? bodyMatch[1].trim().replace(/\n+/g, " ") : "";
-
-              let prompt = "";
-              if (visualDesc) {
-                prompt += visualDesc + "\n";
-              }
-              prompt += "圖片文字疊加規則：\n";
-              if (title) {
-                prompt += `- 圖片上方置中顯示大標題文字：「${title}」，使用粗體大字\n`;
-              }
-              if (body) {
-                prompt += `- 圖片下方顯示內文：「${body}」，使用較小字體\n`;
-              }
-              if (!visualDesc && !title && !body) continue;
-              prompt += "風格：現代、溫馨、專業的獸醫衛教插圖，適合 Instagram 輪播，正方形構圖。";
-              prompts.push(prompt.trim());
-            }
-          }
-
-          // If page splitting didn't work, fall back to generic extraction
-          if (prompts.length === 0) {
-            return extractImagePrompts(text);
-          }
-          return prompts;
-        };
-
-        const platformLabels: Record<string, string> = {
-          fb: "Facebook 貼文主圖",
-          ig: "Instagram 輪播圖",
-          threads: "Threads 貼文配圖",
-          video: "影片縮圖",
-        };
-
-        for (const p of selectedPlatforms) {
-          const content = typeof data[p] === "string" ? data[p] : flattenContent(data[p]);
-          // Use IG-specific carousel parser for Instagram, generic for others
-          let imagePrompts = p === "ig" ? extractIgCarouselPrompts(content) : extractImagePrompts(content);
-
-          // Fallback: if extraction completely failed, use disease + platform as prompt
-          if (imagePrompts.length === 0) {
-            const label = platformLabels[p] || "社群貼文配圖";
-            imagePrompts = [`專業獸醫衛教插圖，主題：${disease}。用途：${label}。風格：現代、溫馨、專業的醫療插畫風格，柔和色調，適合社群媒體，不含任何文字。`];
-            console.log(`[Image] No 🎨/title found for ${p}, using fallback prompt`);
-          } else {
-            console.log(`[Image] Extracted ${imagePrompts.length} prompt(s) for ${p}`);
-          }
-
-          const imgs: string[] = [];
-          for (const imagePrompt of imagePrompts) {
-            try {
-              const imgRes = await fetch("/api/image", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ apiKey, prompt: imagePrompt, platform: p }),
-              });
-              const imgData = await imgRes.json();
-              if (imgData.success && imgData.image) {
-                imgs.push(imgData.image);
-              } else {
-                console.warn(`Image gen returned no image for ${p}:`, imgData.error);
-              }
-            } catch (err) {
-              console.warn(`Image gen failed for ${p}:`, err);
-            }
-          }
-          if (imgs.length > 0) newImages[p] = imgs;
-        }
-        setImages(newImages);
-        setImageLoading(false);
-      }
     } catch (error: any) {
       console.error(error);
       alert(error.message);
@@ -685,48 +563,7 @@ export default function Dashboard() {
                       </label>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                      配圖生成方式
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label
-                        className={`flex items-start p-3 border rounded-xl cursor-pointer transition-all ${!autoImage ? "bg-gray-50 border-gray-200" : "bg-white border-neutral-200 hover:bg-neutral-50"
-                          }`}
-                      >
-                        <input
-                          type="radio"
-                          name="imageMode"
-                          checked={!autoImage}
-                          onChange={() => setAutoImage(false)}
-                          className="w-4 h-4 text-gray-600 border-gray-300 focus:ring-gray-500 mr-2 mt-0.5"
-                        />
-                        <div>
-                          <div className="text-sm font-medium text-neutral-700">手動生圖</div>
-                          <p className="text-xs text-neutral-400 mt-0.5">複製文案到 Gemini 生圖</p>
-                        </div>
-                      </label>
-                      <label
-                        className={`flex items-start p-3 border rounded-xl cursor-pointer transition-all ${autoImage ? "bg-emerald-50 border-emerald-200" : "bg-white border-neutral-200 hover:bg-neutral-50"
-                          }`}
-                      >
-                        <input
-                          type="radio"
-                          name="imageMode"
-                          checked={autoImage}
-                          onChange={() => setAutoImage(true)}
-                          className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500 mr-2 mt-0.5"
-                        />
-                        <div>
-                          <div className="flex items-center text-sm font-medium text-neutral-700">
-                            <ImageIcon className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                            API 自動生圖
-                          </div>
-                          <p className="text-xs text-neutral-400 mt-0.5">Gemini 3 Pro • 消耗 API 額度</p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
+
                   <button
                     type="submit"
                     disabled={isGenerating || !disease || !service || !apiKey || selectedPlatforms.length === 0}
@@ -791,44 +628,6 @@ export default function Dashboard() {
                     </div>
 
                     <div className="p-6 flex-grow bg-neutral-50/50 space-y-4">
-                      {/* Auto-generated images */}
-                      {imageLoading && (
-                        <div className="flex items-center justify-center py-6 bg-emerald-50 rounded-xl border border-emerald-200">
-                          <Loader2 className="w-5 h-5 animate-spin mr-2 text-emerald-600" />
-                          <span className="text-sm text-emerald-700">正在用 Gemini 3 Pro 生成配圖中...</span>
-                        </div>
-                      )}
-                      {images[activeTab] && images[activeTab].length > 0 && (
-                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 shadow-sm p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center">
-                              <ImageIcon className="w-4 h-4 mr-2 text-emerald-700" />
-                              <span className="text-sm font-semibold text-emerald-700">自動生成的配圖</span>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {images[activeTab].map((img, idx) => (
-                              <div key={idx} className="relative group">
-                                <img
-                                  src={img}
-                                  alt={`配圖 ${idx + 1}`}
-                                  className="w-full rounded-lg border border-emerald-100 shadow-sm"
-                                />
-                                <a
-                                  href={img}
-                                  download={`${activeTab}_image_${idx + 1}.png`}
-                                  className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-white rounded-md shadow-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                  title="下載圖片"
-                                >
-                                  <Download className="w-4 h-4 text-emerald-600" />
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Text section */}
                       <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm whitespace-pre-wrap font-mono text-sm leading-relaxed text-neutral-800">
                         {flattenContent(result[activeTab])}
                       </div>

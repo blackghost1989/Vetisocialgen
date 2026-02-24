@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
+// Imagen supports: 1:1, 9:16, 16:9, 4:3, 3:4
 const ASPECT_RATIOS: Record<string, string> = {
     fb: "16:9",
     ig: "1:1",
-    threads: "4:5",
+    threads: "3:4",
     video: "16:9",
 };
 
@@ -26,11 +27,10 @@ export async function POST(req: Request) {
 
         const ai = new GoogleGenAI({ apiKey });
 
-        // Models to try in order; imagen-3 is a dedicated image model less prone to overload
+        // gemini-3-pro (Banana) = best Chinese text rendering, imagen-4 = fast fallback
         const models = [
-            "gemini-2.0-flash-preview-image-generation",
-            "gemini-2.0-flash-exp",
-            "imagen-3.0-generate-002",
+            "gemini-3-pro-image-preview",
+            "imagen-4.0-generate-001",
         ];
         const MAX_RETRIES = 3;
         let lastError: any = null;
