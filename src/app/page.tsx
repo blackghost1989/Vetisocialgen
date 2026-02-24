@@ -172,7 +172,7 @@ export default function Dashboard() {
           const titleMatches = text.match(/(?:大標題|標題文字|【首圖大字】)[：:\s]*(.+)/g);
 
           if (artBlocks && artBlocks.length > 0) {
-            for (const block of artBlocks.slice(0, 3)) {
+            for (const block of artBlocks) {
               // Find any nearby title to enrich the prompt
               let combinedPrompt = block.trim();
               if (titleMatches && titleMatches.length > 0) {
@@ -182,7 +182,7 @@ export default function Dashboard() {
             }
           } else if (titleMatches && titleMatches.length > 0) {
             // No 🎨 blocks but have titles — build a prompt from titles
-            for (const t of titleMatches.slice(0, 3)) {
+            for (const t of titleMatches) {
               const titleText = t.replace(/(?:大標題|標題文字|【首圖大字】)[：:\s]*/g, "").trim();
               prompts.push(`專業獸醫衛教插圖，主題：${titleText}。風格：現代、溫馨、專業，柔和色調，適合社群媒體。`);
             }
