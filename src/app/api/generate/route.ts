@@ -46,20 +46,36 @@ export async function POST(req: Request) {
         });
 
         // Dynamic prompt construction based on selected platforms
-        let jsonFormatBuilder = "{\n";
+        const schemaParts: string[] = [];
         if (platforms.includes("fb")) {
-            jsonFormatBuilder += '  "fb": "適合臉書的深入衛教文案...",\n';
+            schemaParts.push('  "fb": "適合臉書的深入衛教文案與標籤..."');
         }
         if (platforms.includes("ig")) {
-            jsonFormatBuilder += '  "ig": "Carousel 腳本...",\n';
+            schemaParts.push('  "ig": [\n    { "image_prompt": "圖片設計說明", "text": "精簡內文" },\n    { "image_prompt": "圖片設計說明", "text": "精簡內文" }\n  ]');
         }
         if (platforms.includes("threads")) {
-            jsonFormatBuilder += '  "threads": "短貼文...",\n';
+            schemaParts.push('  "threads": "引發好奇或焦慮的短貼文..."');
         }
         if (platforms.includes("video")) {
-            jsonFormatBuilder += '  "video": "\u77ed\u5f71\u97f3\u8173\u672c...",\n';
+            schemaParts.push('  "video": [\n    { "scene": "畫面細節", "dialogue": "口白內容" }\n  ]');
         }
-        jsonFormatBuilder += "}";
+        if (platforms.includes("brochure")) {
+            schemaParts.push(`  "brochure": {
+    "imagePrompts": ["Midjourney/AI image generation prompts for cover/inside based on disease..."],
+    "data": {
+        "id": "generated_brochure",
+        "name": "衛教單標題",
+        "frontCover": { "title": "主標題<br>副標題(斷行)", "subtitle": "次標題介紹", "slogan": "[ 專業 · 關懷 · 安心 ]", "image": "可留空或給Unsplash風格建議網址" },
+        "backCover": { "title": "預約與專業諮詢", "logoUrl": "logo.png", "address": "醫院地址", "phone": "00-0000000", "line": "@LINEID", "website": "https://...", "qrCodeUrl": "" },
+        "insideFlap": { "title": "安心守護：術後居家照護", "aftercareTitle": "標題", "aftercareSteps": [{ "title": "步驟1", "desc": "短描述" }], "redFlagsTitle": "警訊", "redFlagsSubtitle": "", "redFlagItems": ["項目1", "項目2"], "resourceTitle": "", "resourceDesc": "", "resourceQrCodeUrl": "", "bottomImageUrl": "" },
+        "insideLeft": { "title": "為什麼需要？", "items": [{ "title": "原因1", "desc": "短解釋" }], "imageUrl": "" },
+        "insideCenter": { "title": "深度解析與流程", "steps": [{ "title": "步驟1", "desc": "短解釋" }], "riskTitle": "專欄標題", "riskDesc": "專欄描述", "riskTable": [{ "class": "級別", "desc": "短描述", "risk": "風險%" }], "infoList": [{ "label": "重點1", "desc": "短描述" }], "bottomImageUrl": "" },
+        "insideRight": { "title": "進階說明", "subtitle": "副標題", "sections": [{ "title": "段落標題", "desc": "段落描述", "points": [{ "label": "重點1", "text": "短解釋" }] }], "steps": [{ "title": "指導1", "desc": "短描述" }], "doctorNote": "醫師備註", "bottomImageUrl": "" }
+    }
+  }`);
+        }
+
+        const jsonFormatBuilder = "{\n" + schemaParts.join(",\n") + "\n}";
 
         // Style-specific prompt sections
         const styleInstructions = style === "social" ? `
@@ -75,7 +91,8 @@ export async function POST(req: Request) {
    - fb: 🎨 先列出「視覺設計說明」（主圖風格、文字疊加區域建議、標題文字），然後是「📝 貼文內文」。語氣溫暖有同理心，用條列式列出重點症狀或知識（搭配 emoji），結尾用「💡 獸醫小提醒」帶出 CTA 與醫院服務，最後附上「🏷️ 標籤 (Hashtags)」10~15 個相關中英文標籤。
    - ig: Carousel 腳本，共 5~7 頁。**每一頁都必須包含**：🎨「視覺設計說明」（描述該頁的插畫情境、色調、構圖，以及建議的文字疊加位置與標題文字，讓使用者可以直接把這段描述丟到 Gemini 生成含文字的配圖）、emoji、大標題、2~3 行精簡內文。最後一頁之後附上 Hashtags。
    - threads: 用一句引起焦慮或好奇的 Hook 開頭（搭配 emoji），150 字以內的短貼文，結尾引導帶去醫院。附上 5~8 個 Hashtags。
-   - video: 短影音腳本。用【🎬 畫面】和【🎙️ 口白】標示。口白要口語化、有感情。最後帶出醫院服務。` : `
+   - video: 短影音腳本。用【🎬 畫面】和【🎙️ 口白】標示。口白要口語化、有感情。最後帶出醫院服務。
+   - brochure: 根據主題，撰寫一份極度專業、包含醫療術語與衛教步驟的三摺頁設定檔。必須包含 "imagePrompts" (2-3 個高品質的手術/相關情境純英文生圖 Prompt) 以及完全符合架構的 "data" 物件。⚠️版面空間極度有限⚠️：所有陣列 (items, steps, riskTable, 等) 最多只能 3 個項目，且 desc 描述必須極簡，每項不超過 30 字，千萬不可冗長導致設計版面爆板。` : `
 規則：
 1. 長度控制在 5 分鐘閱讀時間內。
 2. 在講解完疾病與最新研究後，必須極度自然地過渡到推廣這項服務：「${service}」。切忌生硬，可以用提問或點出痛點的方式帶入。
@@ -89,7 +106,8 @@ export async function POST(req: Request) {
    - fb: 適合臉書的深入衛教文案，包含痛點引入、疾病知識、最新研究(一句話帶過)、醫院檢查建議、CTA與參考文獻。
    - ig: Carousel (多圖輪播) 腳本。用【首圖大字】與【內文】標示，適合圖片加簡短文字閱讀，最後一定要提到醫院服務。
    - threads: 短平快、引戰或製造焦慮的 Hook 短貼文（約 150 字），引起飼主注意並引導帶去醫院。
-   - video: 短影音腳本。用【畫面】標示要拍攝的內容或素材，用【口白】標示要講的話。最後一幕要帶出醫院與檢查服務。`;
+   - video: 短影音腳本。用【畫面】標示要拍攝的內容或素材，用【口白】標示要講的話。最後一幕要帶出醫院與檢查服務。
+   - brochure: 根據主題，撰寫一份極度專業的三摺頁設定檔，完全符合我們設計的 JSON 結構，內容應包含原因解釋、詳細流程或技術專欄、照護指南、警訊等。並產生 "imagePrompts" (包含 2-3句 英文 AI 生圖提示詞)。⚠️版面實體印刷空間極度有限⚠️：任何條列清單 (items, steps, riskTable, points) 絕對不可超過 3-4 項，且介紹內文與小標題必須極度濃縮，每段敘述 (desc) 不超過 40 字，以免文字溢出實體紙張邊界。`;
 
         const prompt = `
 你是一位擁有 15 年經驗的專業獸醫師兼頂級社群行銷專家。

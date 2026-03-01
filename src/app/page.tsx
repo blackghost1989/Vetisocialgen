@@ -18,10 +18,14 @@ import {
   RefreshCw,
   GraduationCap,
   Sparkles,
-
+  Printer,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 
-type Platform = "fb" | "ig" | "threads" | "video";
+import BrochurePreview from "./components/BrochurePreview";
+
+type Platform = "fb" | "ig" | "threads" | "video" | "brochure";
 
 export default function Dashboard() {
   const [disease, setDisease] = useState("");
@@ -33,11 +37,12 @@ export default function Dashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [pageStart, setPageStart] = useState<string>("");
   const [pageEnd, setPageEnd] = useState<string>("");
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(["fb", "ig", "threads", "video"]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(["fb", "ig", "threads", "video", "brochure"]);
   const [generatedPlatforms, setGeneratedPlatforms] = useState<Platform[]>([]);
   const [style, setStyle] = useState<"professional" | "social">("social");
 
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDbMode, setIsDbMode] = useState(false);
   const [dbStatus, setDbStatus] = useState({ loading: false, message: "", success: false });
 
@@ -189,6 +194,7 @@ export default function Dashboard() {
     { id: "ig", label: "Instagram", icon: <Instagram className="w-4 h-4 mr-2" /> },
     { id: "threads", label: "Threads", icon: <AlignLeft className="w-4 h-4 mr-2" /> },
     { id: "video", label: "影音腳本", icon: <Video className="w-4 h-4 mr-2" /> },
+    { id: "brochure", label: "實體三摺頁", icon: <Printer className="w-4 h-4 mr-2" /> },
   ];
 
   const togglePlatform = (platform: Platform) => {
@@ -231,9 +237,9 @@ export default function Dashboard() {
   const currentTabs = tabs.filter((tab) => generatedPlatforms.includes(tab.id));
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-4 md:p-8 font-sans">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-neutral-200">
+    <div className="min-h-screen bg-neutral-50 p-4 md:p-8 font-sans print:bg-white print:p-0">
+      <div className="max-w-6xl mx-auto space-y-6 print:max-w-none print:m-0 print:space-y-0">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-neutral-200 print:hidden">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-blue-600 rounded-lg">
               <Stethoscope className="w-6 h-6 text-white" />
@@ -264,9 +270,9 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 print:block print:gap-0">
           {/* 左側：輸入表單 */}
-          <div className="col-span-1 lg:col-span-4 space-y-6">
+          <div className={`col-span-1 space-y-6 transition-all print:hidden ${isSidebarOpen ? 'lg:col-span-4' : 'hidden'}`}>
             {isDbMode ? (
               // Database Ingest UI
               <div className="bg-emerald-50/50 p-6 rounded-2xl shadow-sm border border-emerald-100 space-y-6">
@@ -594,12 +600,20 @@ export default function Dashboard() {
           </div>
 
           {/* 右側：產生結果預覽 (Only shown in Generate Mode) */}
-          <div className="col-span-1 lg:col-span-8 flex flex-col space-y-4">
+          <div className={`col-span-1 flex flex-col space-y-4 transition-all print:space-y-0 print:block ${isSidebarOpen ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
             {!isDbMode && (
-              <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 min-h-[500px] flex flex-col">
+              <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 min-h-[500px] flex flex-col print:border-none print:shadow-none print:block">
                 {result ? (
                   <>
-                    <div className="border-b border-neutral-100 p-2 flex space-x-2 overflow-x-auto">
+                    <div className="border-b border-neutral-100 p-2 flex items-center space-x-2 overflow-x-auto print:hidden">
+                      <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        className="flex items-center justify-center p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer mr-1"
+                        title={isSidebarOpen ? "收起側邊欄" : "展開側邊欄"}
+                      >
+                        {isSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}
+                      </button>
+                      <div className="h-4 w-px bg-neutral-200 mx-1"></div>
                       {currentTabs.map((tab) => (
                         <button
                           key={tab.id}
@@ -627,10 +641,19 @@ export default function Dashboard() {
                       </button>
                     </div>
 
-                    <div className="p-6 flex-grow bg-neutral-50/50 space-y-4">
-                      <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm whitespace-pre-wrap font-mono text-sm leading-relaxed text-neutral-800">
-                        {flattenContent(result[activeTab])}
-                      </div>
+                    <div className="p-6 flex-grow bg-neutral-50/50 space-y-4 print:p-0 print:bg-white print:space-y-0">
+                      {activeTab === "brochure" && result["brochure"]?.data ? (
+                        <div className="-mx-6 px-2 sm:px-6 print:mx-0 print:px-0">
+                          <BrochurePreview
+                            data={result["brochure"].data}
+                            imagePrompts={result["brochure"].imagePrompts}
+                          />
+                        </div>
+                      ) : (
+                        <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm whitespace-pre-wrap font-mono text-sm leading-relaxed text-neutral-800">
+                          {flattenContent(result[activeTab])}
+                        </div>
+                      )}
                     </div>
                   </>
                 ) : (

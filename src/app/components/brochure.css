@@ -1,0 +1,294 @@
+/* brochure.css */
+
+.brochure-container {
+  --primary: #439ca6;
+  --secondary: #205c6c;
+  --accent: #d85c41;
+  --gray-light: #f5f7f8;
+  --gray-border: #d1dde0;
+  --gap: 10mm;
+}
+
+/* Hide editable outline when printing or normally unless hovered */
+.brochure-doc [contenteditable="true"] {
+  outline: 1px solid transparent;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.brochure-doc [contenteditable="true"]:hover {
+  outline: 1px dashed rgba(67, 156, 166, 0.5);
+  background: rgba(255, 255, 255, 0.4);
+  cursor: text;
+}
+
+.brochure-doc [contenteditable="true"]:focus {
+  outline: 2px solid var(--primary);
+  background: white;
+  color: #333;
+}
+
+.brochure-doc .bg-main [contenteditable="true"]:hover {
+  outline: 1px dashed rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.brochure-doc .bg-main [contenteditable="true"]:focus {
+  outline: 2px solid white;
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+}
+
+/* A4 Landscape Sheets */
+.brochure-doc .sheet {
+  width: 297mm;
+  height: 210mm;
+  background-color: #ffffff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  flex-shrink: 0;
+  font-family: 'Noto Sans TC', sans-serif;
+  color: #333;
+}
+
+.brochure-doc .sheet:last-child {
+  page-break-after: auto;
+}
+
+.brochure-doc .sheet::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Next.js public folder path for pattern */
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2v2H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2z' fill='%23f0f4f5' fill-opacity='0.5' fill-rule='evenodd'/%3E");
+  z-index: 0;
+  pointer-events: none;
+}
+
+.brochure-doc .panel {
+  flex: 1;
+  height: 100%;
+  max-height: 210mm;
+  padding: var(--gap);
+  border-right: 1px dashed var(--gray-border);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.brochure-doc .panel:last-child {
+  border-right: none;
+}
+
+.brochure-doc h2.section-title {
+  color: var(--secondary);
+  font-size: 1.2rem;
+  font-weight: 900;
+  border-bottom: 2px solid var(--secondary);
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.brochure-doc .panel:not(.bg-main) b,
+.brochure-doc .panel:not(.bg-main) strong,
+.brochure-doc .panel:not(.bg-main) h3,
+.brochure-doc .panel:not(.bg-main) h4 {
+  color: var(--secondary);
+}
+
+.brochure-doc p {
+  line-height: 1.4;
+  font-size: 0.85rem;
+  text-align: justify;
+  margin: 0;
+}
+
+.brochure-doc .bg-main {
+  background-color: var(--primary);
+  color: white;
+}
+
+.brochure-doc .bg-main h2.section-title {
+  color: white;
+  border-bottom-color: rgba(255, 255, 255, 0.4);
+}
+
+.brochure-doc .bg-main p {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.brochure-doc .table-risk {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 5px;
+  font-size: 0.8rem;
+}
+
+.brochure-doc .table-risk th,
+.brochure-doc .table-risk td {
+  border: 1px solid var(--gray-border);
+  padding: 5px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.brochure-doc .table-risk th {
+  background: var(--secondary);
+  color: white;
+  font-weight: normal;
+}
+
+.brochure-doc .bullet-item {
+  margin-bottom: 10px;
+}
+
+.brochure-doc .bullet-item h4 {
+  margin-bottom: 2px;
+  color: var(--secondary);
+  font-size: 1rem;
+}
+
+.brochure-doc .bullet-item p {
+  font-size: 0.85rem;
+}
+
+.brochure-doc .step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.brochure-doc .step-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: bold;
+  color: white;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.brochure-doc .step-content h4 {
+  margin-bottom: 2px;
+  color: var(--secondary);
+  font-size: 0.95rem;
+}
+
+.brochure-doc .step-content p {
+  font-size: 0.85rem;
+}
+
+.text-secondary {
+  color: var(--secondary);
+}
+
+.brochure-doc .upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--gray-border);
+  border-radius: 8px;
+  color: var(--secondary);
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.brochure-doc .bg-main .upload-area {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.8);
+  background-color: transparent;
+}
+
+.brochure-doc .upload-area:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.brochure-doc .bg-main .upload-area:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: white;
+  color: white;
+}
+
+/* Missing image placeholder styles */
+.brochure-doc .filler-image:not(:has(img)) {
+  min-height: 80px;
+  border: 2px dashed rgba(67, 156, 166, 0.3);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.brochure-doc .bg-main .filler-image:not(:has(img)) {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    background: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .brochure-container {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: none !important;
+  }
+
+  .brochure-doc {
+    gap: 0 !important;
+  }
+
+  .brochure-doc .sheet {
+    box-shadow: none !important;
+    margin: 0;
+  }
+
+  .brochure-doc .panel {
+    border-right: none !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .controls,
+  header,
+  .bg-blue-50,
+  form,
+  .grid-cols-12 {
+    display: none !important;
+  }
+
+  .col-span-8 {
+    width: 100% !important;
+    grid-column: span 12 / span 12 !important;
+  }
+}
