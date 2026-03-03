@@ -8,6 +8,9 @@ export default function BrochurePreview({ data, imagePrompts }: { data: any, ima
     const uploadTargetRef = useRef<string | null>(null);
     const [qrUrl, setQrUrl] = useState(data?.backCover?.qrCodeUrl || "");
     const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
+    const [bgImageUrl, setBgImageUrl] = useState<string | null>("/bg-pattern.jpg");
+    const [bgSize, setBgSize] = useState<string>("auto");
+    const [bgOpacity, setBgOpacity] = useState<number>(0.15);
 
     const hideImage = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
@@ -46,6 +49,12 @@ export default function BrochurePreview({ data, imagePrompts }: { data: any, ima
         const file = e.target.files?.[0];
         if (!file || !uploadTargetRef.current) return;
         const url = URL.createObjectURL(file);
+
+        if (uploadTargetRef.current === "bgImage") {
+            setBgImageUrl(url);
+            return;
+        }
+
         const imgEl = document.getElementById(uploadTargetRef.current) as HTMLImageElement;
         if (imgEl && imgEl.tagName === 'IMG') {
             imgEl.src = url;
@@ -65,10 +74,42 @@ export default function BrochurePreview({ data, imagePrompts }: { data: any, ima
             <div className="mb-4 bg-yellow-50 text-yellow-800 p-4 rounded-lg flex flex-col justify-between border border-yellow-200 text-sm print:hidden">
                 <div className="flex items-center justify-between mb-3 border-b border-yellow-200 pb-3">
                     <div className="font-bold">⭐ AI 生成的專屬製圖指令 (Image Prompts)</div>
-                    <button onClick={() => window.print()} className="bg-[#439ca6] hover:bg-[#205c6c] text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-sm flex items-center cursor-pointer">
-                        🖨️ 列印 A4 / 匯出 PDF
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={() => triggerUpload("bgImage")} className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-bold transition-colors shadow-sm flex items-center cursor-pointer">
+                            🖼️ 上傳背景圖
+                        </button>
+                        {bgImageUrl && (
+                            <button onClick={() => {
+                                setBgImageUrl(null);
+                                setBgOpacity(0.3);
+                                setBgSize("cover");
+                            }} className="bg-red-50 border border-red-200 hover:bg-red-100 text-red-600 px-3 py-2 rounded-lg font-bold transition-colors shadow-sm flex items-center cursor-pointer" title="移除背景">
+                                🗑️
+                            </button>
+                        )}
+                        <button onClick={() => window.print()} className="bg-[#439ca6] hover:bg-[#205c6c] text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-sm flex items-center cursor-pointer">
+                            🖨️ 列印 A4 / 匯出 PDF
+                        </button>
+                    </div>
                 </div>
+                {bgImageUrl && (
+                    <div className="flex flex-wrap items-center gap-6 mb-3 p-3 bg-white/80 border border-yellow-300 rounded-lg">
+                        <label className="text-sm font-bold flex items-center gap-2 text-gray-700">
+                            調整背景透明度 (Opacity): {Math.round(bgOpacity * 100)}%
+                            <input type="range" min="0.05" max="1" step="0.05" value={bgOpacity} onChange={(e) => setBgOpacity(parseFloat(e.target.value))} className="w-24 cursor-pointer" />
+                        </label>
+                        <label className="text-sm font-bold flex items-center gap-2 text-gray-700">
+                            縮放:
+                            <select value={bgSize} onChange={(e) => setBgSize(e.target.value)} className="border border-gray-300 p-1 px-2 rounded cursor-pointer outline-none font-normal text-sm">
+                                <option value="cover">填滿 (Cover)</option>
+                                <option value="contain">完整顯示 (Contain)</option>
+                                <option value="100% 100%">拉伸符合 (Stretch)</option>
+                                <option value="auto">重複拼貼 - 原始大小 (Tile)</option>
+                                <option value="150px">重複拼貼 - 小圖 (Tile Small)</option>
+                            </select>
+                        </label>
+                    </div>
+                )}
                 <ul className="list-disc pl-5 space-y-1 mb-2">
                     {imagePrompts && imagePrompts.map((p, i) => (
                         <li key={i} className="opacity-90">{p}</li>
@@ -82,7 +123,19 @@ export default function BrochurePreview({ data, imagePrompts }: { data: any, ima
             <div id="document-container" className="brochure-doc flex flex-col items-center gap-10">
 
                 {/* Sheet 1: 內頁 */}
-                <div className="sheet">
+                <div className={`sheet ${bgImageUrl ? "has-custom-bg" : ""}`}>
+                    {bgImageUrl && (
+                        <div
+                            className="absolute inset-0 pointer-events-none z-[0] print:z-[0]"
+                            style={{
+                                backgroundImage: `url(${bgImageUrl})`,
+                                backgroundSize: bgSize,
+                                backgroundPosition: "center",
+                                backgroundRepeat: (bgSize === 'auto' || bgSize === '150px') ? "repeat" : "no-repeat",
+                                opacity: bgOpacity
+                            }}
+                        />
+                    )}
                     {/* 內左 */}
                     <div className="panel">
                         <h2 className="section-title" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: data.insideLeft?.title || "" }} />
@@ -247,7 +300,19 @@ export default function BrochurePreview({ data, imagePrompts }: { data: any, ima
                 </div>
 
                 {/* Sheet 2: 外頁 */}
-                <div className="sheet">
+                <div className={`sheet ${bgImageUrl ? "has-custom-bg" : ""}`}>
+                    {bgImageUrl && (
+                        <div
+                            className="absolute inset-0 pointer-events-none z-[0] print:z-[0]"
+                            style={{
+                                backgroundImage: `url(${bgImageUrl})`,
+                                backgroundSize: bgSize,
+                                backgroundPosition: "center",
+                                backgroundRepeat: (bgSize === 'auto' || bgSize === '150px') ? "repeat" : "no-repeat",
+                                opacity: bgOpacity
+                            }}
+                        />
+                    )}
                     {/* 摺入頁 */}
                     <div className="panel bg-main py-[8mm]">
                         <h2 className="section-title border-[#ffffff66] mb-3 text-white" contentEditable suppressContentEditableWarning dangerouslySetInnerHTML={{ __html: data.insideFlap?.title || "" }} />
