@@ -243,6 +243,19 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+.brochure-doc .sheet.has-custom-bg::before {
+  display: none;
+}
+
+.brochure-doc .sheet.has-custom-bg .bg-main {
+  /* Using rgba variant of primary color (#439ca6) */
+  background-color: rgba(67, 156, 166, 0.85);
+}
+
+.brochure-doc .sheet.has-custom-bg .back-cover {
+  background-color: rgba(245, 247, 248, 0.85) !important;
+}
+
 @media print {
   @page {
     size: A4 landscape;
